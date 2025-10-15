@@ -1,7 +1,9 @@
 # app.py
 
+import os
 import streamlit as st
 import json
+from dotenv import load_dotenv, set_key
 from api_client import fetch_candidates
 from data_processor import process_candidate_data
 
@@ -13,28 +15,55 @@ def display_metrics(metrics):
     col_page.metric("Trang hiện tại", metrics.get("page"))
 
 def main():
+    # load .env if exists
+    ENV_PATH = os.path.join(os.getcwd(), ".env")
+    load_dotenv(ENV_PATH)
+
     st.title("Ứng dụng Truy vấn Base.vn Candidate List API")
     st.markdown("---")
+
+    # --- Cấu hình lưu vào .env (không commit) ---
+    with st.expander("Cấu hình (lưu vào .env, không commit)"):
+        with st.form("config_form"):
+            st.write("Nhập token và các cấu hình mặc định. Các giá trị này sẽ được lưu vào `.env`.")
+            token_input = st.text_input("BASE_TOKEN", value=os.getenv("BASE_TOKEN", ""))
+            opening_input = st.text_input("OPENING_ID", value=os.getenv("OPENING_ID", "9346"))
+            stage_input = st.text_input("STAGE_ID", value=os.getenv("STAGE_ID", "75440"))
+            num_per_page_default = int(os.getenv("NUM_PER_PAGE", "50") if os.getenv("NUM_PER_PAGE") else 50)
+            num_per_page_input = st.number_input("NUM_PER_PAGE", min_value=1, max_value=100, value=num_per_page_default)
+            save_cfg = st.form_submit_button("Lưu cấu hình vào .env")
+
+        if save_cfg:
+            # tạo/ghi .env bằng python-dotenv
+            try:
+                set_key(ENV_PATH, "BASE_TOKEN", token_input)
+                set_key(ENV_PATH, "OPENING_ID", opening_input)
+                set_key(ENV_PATH, "STAGE_ID", stage_input)
+                set_key(ENV_PATH, "NUM_PER_PAGE", str(num_per_page_input))
+                load_dotenv(ENV_PATH, override=True)
+                st.success("Đã lưu vào .env. Đảm bảo không commit file .env lên git.")
+            except Exception as e:
+                st.error(f"Không thể lưu .env: {e}")
 
     # --- 1. Form Nhập Tham số Tương tác ---
     with st.form("api_query_form"):
         st.subheader("Tham số API")
-        
-        # Access Token nên được lấy từ st.secrets trong thực tế
+
+        # Access Token lấy từ .env nếu có
         access_token = st.text_input(
             "Access Token:", 
             help="Nhập access_token được cấp", 
-            value=st.secrets.get("BASE_TOKEN", "your_default_token") if "BASE_TOKEN" in st.secrets else "token"
+            value=os.getenv("BASE_TOKEN", "")
         )
-        
+
         col1, col2 = st.columns(2)
         with col1:
-            opening_id = st.text_input("Opening ID:", value="9346")
+            opening_id = st.text_input("Opening ID:", value=os.getenv("OPENING_ID", "9346"))
             page = st.number_input("Trang (page):", min_value=1, value=1)
             
         with col2:
-            stage = st.text_input("Stage ID:", value="75440")
-            num_per_page = st.number_input("Số lượng/trang (num_per_page):", min_value=1, max_value=100, value=50)
+            stage = st.text_input("Stage ID:", value=os.getenv("STAGE_ID", "75440"))
+            num_per_page = st.number_input("Số lượng/trang (num_per_page):", min_value=1, max_value=100, value=int(os.getenv("NUM_PER_PAGE", "50") if os.getenv("NUM_PER_PAGE") else 50))
 
         submitted = st.form_submit_button("Gửi Yêu cầu API (POST)")
 
