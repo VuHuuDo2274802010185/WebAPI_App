@@ -11,16 +11,44 @@
 - **Validation**: Kiểm tra dữ liệu đầu vào với Pydantic
 - **Error Handling**: Xử lý lỗi đầy đủ và trả về response rõ ràng
 
+## Quickstart
+
+```bash
+# 1. Clone repository
+git clone https://github.com/HoangThinh2024/WebAPI_App.git
+cd WebAPI_App
+
+# 2. Cài đặt dependencies
+pip install -r requirements.txt
+
+# 3. Tạo file .env từ template
+cp .env.example .env
+# Chỉnh sửa .env và thêm BASE_TOKEN của bạn
+
+# 4. Chạy API server
+python api_server.py
+
+# Hoặc sử dụng make
+make run-api
+```
+
 ## Cài đặt
 
 ### Yêu cầu
 - Python 3.8+
 - pip
+- (Optional) Docker & Docker Compose
 
 ### Cài đặt dependencies
 
 ```bash
 pip install -r requirements.txt
+```
+
+hoặc sử dụng Makefile:
+
+```bash
+make install
 ```
 
 ## Cấu hình
@@ -264,7 +292,89 @@ uvicorn api_server:app --reload --host 0.0.0.0 --port 8000
 
 ### Testing API
 
+```bash
+# Chạy test suite
+make test
+# hoặc
+python test_api.py
+
+# Chạy ví dụ sử dụng
+make example
+# hoặc
+python example_usage.py
+```
+
 Sử dụng Swagger UI tại `http://localhost:8000/docs` để test các endpoints interactively.
+
+## Docker Deployment
+
+### Build và chạy với Docker
+
+```bash
+# Build image
+docker build -t webapi-app .
+
+# Chạy container
+docker run -p 8000:8000 --env-file .env webapi-app
+```
+
+### Sử dụng Docker Compose
+
+```bash
+# Khởi động
+docker-compose up -d
+
+# Xem logs
+docker-compose logs -f
+
+# Dừng
+docker-compose down
+```
+
+hoặc sử dụng Makefile:
+
+```bash
+make docker-build
+make docker-run
+make docker-stop
+```
+
+## Makefile Commands
+
+```bash
+make help          # Hiển thị tất cả commands
+make install       # Cài đặt dependencies
+make run-api       # Chạy API server
+make run-ui        # Chạy Streamlit UI
+make test          # Chạy tests
+make example       # Chạy ví dụ
+make docker-build  # Build Docker image
+make docker-run    # Chạy với Docker Compose
+make docker-stop   # Dừng containers
+make clean         # Dọn dẹp cache files
+```
+
+## Troubleshooting
+
+### API không kết nối được Base.vn
+- Kiểm tra `BASE_TOKEN` trong file `.env` có đúng không
+- Kiểm tra internet connection
+- Kiểm tra Base.vn API có đang hoạt động không
+
+### Port 8000 đã được sử dụng
+```bash
+# Thay đổi port trong .env
+API_PORT=8080
+
+# Hoặc khi chạy
+API_PORT=8080 python api_server.py
+```
+
+### Import errors
+```bash
+# Đảm bảo tất cả dependencies đã được cài đặt
+pip install -r requirements.txt
+```
 
 ## License
 
