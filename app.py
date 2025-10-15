@@ -5,7 +5,7 @@ import streamlit as st
 import json
 import requests
 from dotenv import load_dotenv, set_key
-from api_client import fetch_candidates, fetch_openings_list, fetch_opening
+from api_client import fetch_candidates, fetch_openings_list, fetch_opening, fetch_candidate_detail, fetch_candidate_messages
 from data_processor import process_candidate_data
 
 # Define SimpleResp at module level
@@ -220,6 +220,108 @@ def main():
             st.error(str(e))
         except json.JSONDecodeError:
             st.error("Lỗi giải mã JSON. API có thể đã trả về dữ liệu không hợp lệ.")
+
+    # --- 3. Get Candidate Details ---
+    st.markdown("---")
+    st.subheader("🔍 Lấy Chi tiết Ứng viên")
+    
+    with st.form("candidate_detail_form"):
+        candidate_id_detail = st.text_input(
+            "Candidate ID:",
+            help="Nhập ID của ứng viên cần xem chi tiết",
+            value=""
+        )
+        access_token_detail = st.text_input(
+            "Access Token:",
+            help="Nhập access_token được cấp từ Base.vn",
+            value=os.getenv("BASE_TOKEN", "")
+        )
+        use_proxy_detail = st.checkbox("🔄 Sử dụng Proxy Server Local", value=False)
+        submitted_detail = st.form_submit_button("🔍 Lấy Chi tiết Ứng viên")
+    
+    if submitted_detail and candidate_id_detail:
+        st.info("Đang lấy chi tiết ứng viên...")
+        
+        try:
+            if use_proxy_detail:
+                proxy_url = os.getenv("LOCAL_PROXY_URL", f"http://127.0.0.1:8000/candidate/{candidate_id_detail}")
+                if not proxy_url.startswith("http://127.0.0.1:8000/candidate/"):
+                    proxy_url = f"http://127.0.0.1:8000/candidate/{candidate_id_detail}"
+                params = {"access_token": access_token_detail}
+                response = requests.post(proxy_url, params=params)
+            else:
+                response = fetch_candidate_detail(access_token_detail, candidate_id_detail)
+            
+            st.subheader("Kết quả Phản hồi")
+            st.write(f"**Mã Trạng thái (Status Code):** `{response.status_code}`")
+            
+            if response.status_code == 200:
+                json_data = response.json()
+                st.success("✅ Lấy chi tiết ứng viên thành công!")
+                st.json(json_data)
+            else:
+                st.error(f"Lỗi: API trả về mã trạng thái {response.status_code}.")
+                st.code(response.text, language="text")
+        
+        except ConnectionError as e:
+            st.error(str(e))
+        except json.JSONDecodeError:
+            st.error("Lỗi giải mã JSON. API có thể đã trả về dữ liệu không hợp lệ.")
+        except Exception as e:
+            st.error(f"Lỗi: {e}")
+    elif submitted_detail and not candidate_id_detail:
+        st.warning("⚠️ Vui lòng nhập Candidate ID")
+
+    # --- 4. Get Candidate Messages ---
+    st.markdown("---")
+    st.subheader("💬 Lấy Tin nhắn Ứng viên")
+    
+    with st.form("candidate_messages_form"):
+        candidate_id_messages = st.text_input(
+            "Candidate ID:",
+            help="Nhập ID của ứng viên cần xem tin nhắn",
+            value=""
+        )
+        access_token_messages = st.text_input(
+            "Access Token:",
+            help="Nhập access_token được cấp từ Base.vn",
+            value=os.getenv("BASE_TOKEN", "")
+        )
+        use_proxy_messages = st.checkbox("🔄 Sử dụng Proxy Server Local", value=False)
+        submitted_messages = st.form_submit_button("💬 Lấy Tin nhắn")
+    
+    if submitted_messages and candidate_id_messages:
+        st.info("Đang lấy tin nhắn ứng viên...")
+        
+        try:
+            if use_proxy_messages:
+                proxy_url = os.getenv("LOCAL_PROXY_URL", f"http://127.0.0.1:8000/candidate/{candidate_id_messages}/messages")
+                if not proxy_url.startswith("http://127.0.0.1:8000/candidate/"):
+                    proxy_url = f"http://127.0.0.1:8000/candidate/{candidate_id_messages}/messages"
+                params = {"access_token": access_token_messages}
+                response = requests.post(proxy_url, params=params)
+            else:
+                response = fetch_candidate_messages(access_token_messages, candidate_id_messages)
+            
+            st.subheader("Kết quả Phản hồi")
+            st.write(f"**Mã Trạng thái (Status Code):** `{response.status_code}`")
+            
+            if response.status_code == 200:
+                json_data = response.json()
+                st.success("✅ Lấy tin nhắn ứng viên thành công!")
+                st.json(json_data)
+            else:
+                st.error(f"Lỗi: API trả về mã trạng thái {response.status_code}.")
+                st.code(response.text, language="text")
+        
+        except ConnectionError as e:
+            st.error(str(e))
+        except json.JSONDecodeError:
+            st.error("Lỗi giải mã JSON. API có thể đã trả về dữ liệu không hợp lệ.")
+        except Exception as e:
+            st.error(f"Lỗi: {e}")
+    elif submitted_messages and not candidate_id_messages:
+        st.warning("⚠️ Vui lòng nhập Candidate ID")
 
 
 if __name__ == "__main__":
