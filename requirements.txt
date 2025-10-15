@@ -3,3 +3,6 @@ pandas
 numpy
 streamlit
 python-dotenv
+fastapi
+uvicorn[standard]
+pydantic
