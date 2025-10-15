@@ -3,6 +3,7 @@
 import os
 import streamlit as st
 import json
+import requests
 from dotenv import load_dotenv, set_key
 from api_client import fetch_candidates
 from data_processor import process_candidate_data
@@ -66,21 +67,49 @@ def main():
             num_per_page = st.number_input("Số lượng/trang (num_per_page):", min_value=1, max_value=100, value=int(os.getenv("NUM_PER_PAGE", "50") if os.getenv("NUM_PER_PAGE") else 50))
 
         submitted = st.form_submit_button("Gửi Yêu cầu API (POST)")
+    use_local_proxy = st.checkbox("Sử dụng proxy local (http://127.0.0.1:8000/candidates)", value=False)
 
     # --- 2. Logic Gọi API và Xử lý ---
     if submitted:
         st.info("Đang gửi yêu cầu và xử lý dữ liệu...")
         
         try:
-            # Gọi hàm API từ module api_client.py
-            response = fetch_candidates(access_token, opening_id, page, num_per_page, stage)
+            # Nếu chọn dùng proxy local, gọi endpoint /candidates trên FastAPI server
+            if use_local_proxy:
+                proxy_url = os.getenv("LOCAL_PROXY_URL", "http://127.0.0.1:8000/candidates")
+                proxy_payload = {
+                    "access_token": access_token,
+                    "opening_id": opening_id,
+                    "page": page,
+                    "num_per_page": num_per_page,
+                    "stage": stage
+                }
+                proxy_resp = requests.post(proxy_url, data=proxy_payload)
+                # proxy returns JSON with processed data and raw
+                if proxy_resp.status_code == 200:
+                    proxy_json = proxy_resp.json()
+                    # adapt shape used later: set response-like object
+                    class SimpleResp:
+                        def __init__(self, status_code, json_data, text):
+                            self.status_code = status_code
+                            self._json = json_data
+                            self.text = text
+                        def json(self):
+                            return self._json
+
+                    response = SimpleResp(200, proxy_json.get("raw", {}), json.dumps(proxy_json))
+                else:
+                    response = SimpleResp(proxy_resp.status_code, {}, proxy_resp.text)
+            else:
+                # Gọi hàm API từ module api_client.py trực tiếp
+                response = fetch_candidates(access_token, opening_id, page, num_per_page, stage)
             
             st.subheader("Kết quả Phản hồi")
             st.write(f"**Mã Trạng thái (Status Code):** `{response.status_code}`")
 
             if response.status_code == 200:
                 json_data = response.json()
-                
+
                 # Xử lý và trích xuất dữ liệu từ module data_processor.py
                 processed_data = process_candidate_data(json_data)
                 
