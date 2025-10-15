@@ -6,10 +6,14 @@ Files of interest:
 
 - `api_client.py` - helper functions that call Base.vn public endpoints.
 - `data_processor.py` - transforms candidate JSON into a pandas DataFrame and metrics.
-- `web_api.py` - FastAPI application that exposes three endpoints:
+- `web_api.py` - FastAPI application that exposes a complete REST API wrapper with the following endpoints:
+	- GET `/html` - Beautiful HTML landing page with complete API documentation
+	- GET `/` - JSON API information with all endpoints and examples
 	- POST `/openings` - proxies `/opening/list` on hiring.base.vn
 	- POST `/opening/{id}` - proxies `/opening/get` for a given opening id
 	- POST `/candidates` - fetches candidate list and returns processed table + raw JSON
+	- POST `/candidate/{id}` - proxies `/candidate/get` for candidate details
+	- POST `/candidate/{id}/messages` - proxies `/candidate/messages` for candidate message history
 
 Requirements and run
 --------------------
@@ -28,23 +32,40 @@ Run the FastAPI server with uvicorn:
 uvicorn web_api:app --reload --port 8000
 ```
 
+Access the API:
+
+1. **HTML Landing Page** (Beautiful documentation page):
+   ```
+   http://localhost:8000/html
+   ```
+
+2. **JSON API Info** (All endpoints and examples):
+   ```
+   http://localhost:8000/
+   ```
+
+3. **Interactive Swagger UI**:
+   ```
+   http://localhost:8000/docs
+   ```
+
 Examples (curl):
 
 ```powershell
-curl -X POST "http://127.0.0.1:8000/openings" -d "access_token=token&page=1&num_per_page=50&order_by=starred"
+# List openings
+curl -X POST "http://127.0.0.1:8000/openings?access_token=token&page=1&num_per_page=50&order_by=starred"
 
-curl -X POST "http://127.0.0.1:8000/opening/9346" -d "access_token=token"
+# Get opening details
+curl -X POST "http://127.0.0.1:8000/opening/9346?access_token=token"
 
-curl -X POST "http://127.0.0.1:8000/candidates" -d "access_token=token&opening_id=9346&page=1&num_per_page=50&stage=75440"
-```
+# List candidates
+curl -X POST "http://127.0.0.1:8000/candidates?access_token=token&opening_id=9346&page=1&num_per_page=50&stage=75440"
 
-Candidate detail & messages examples:
+# Get candidate details
+curl -X POST "http://127.0.0.1:8000/candidate/518156?access_token=token"
 
-```powershell
-curl -X POST "http://127.0.0.1:8000/candidate/518156" -d "access_token=token"
-
-curl -X POST "http://127.0.0.1:8000/candidate/510943/messages" -d "access_token=token"
-```
+# Get candidate messages
+curl -X POST "http://127.0.0.1:8000/candidate/510943/messages?access_token=token"
 ```
 
 Notes
