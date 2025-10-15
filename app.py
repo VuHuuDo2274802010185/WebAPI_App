@@ -119,7 +119,7 @@ def main():
                 st.subheader(f"Danh sách Ứng viên (Tìm thấy: {processed_data['count_candidates']})")
                 
                 if not processed_data["dataframe"].empty:
-                    st.dataframe(processed_data["dataframe"], use_container_width=True)
+                    st.dataframe(processed_data["dataframe"], width="stretch")
                 else:
                     st.warning("Không tìm thấy ứng viên nào.")
                     
