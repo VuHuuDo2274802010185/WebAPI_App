@@ -158,6 +158,7 @@ WebAPI_App/
 
 ## 🔧 Tính năng
 
+### Core Features
 - ✅ Truy vấn Base.vn Candidate List API
 - ✅ Hiển thị danh sách ứng viên dạng bảng
 - ✅ Hiển thị các chỉ số tổng quan (total, count, page)
@@ -165,12 +166,30 @@ WebAPI_App/
 - ✅ Form tương tác để nhập tham số API
 - ✅ Xử lý lỗi API và kết nối
 
+### 🆕 Advanced Features
+- ✅ **Dropdown Opening & Stage**: Tự động load và chọn từ danh sách thay vì nhập thủ công
+- ✅ **Session State**: Lưu danh sách openings trong session, không cần load lại
+- ✅ **Environment Config**: Lưu cấu hình vào `.env` file
+- ✅ **Local Proxy Support**: Hỗ trợ gọi API qua FastAPI proxy server local
+
+> 📖 Xem chi tiết: [DROPDOWN_GUIDE.md](DROPDOWN_GUIDE.md)
+
 ## 📦 Dependencies
 
+### Core
 - `requests==2.32.5` - HTTP client
 - `pandas==2.3.3` - Data processing
 - `numpy==2.3.3` - Numerical computing
 - `streamlit==1.50.0` - Web framework
+
+### Configuration & Environment
+- `python-dotenv==1.0.1` - Environment variables management
+
+### Optional (for local proxy server)
+- `fastapi==0.115.6` - API framework
+- `uvicorn==0.34.2` - ASGI server
+- `httpx==0.28.1` - Async HTTP client
+- `pydantic==2.10.6` - Data validation
 
 ## 🐛 Debug
 

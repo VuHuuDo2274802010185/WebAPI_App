@@ -5,8 +5,18 @@ import streamlit as st
 import json
 import requests
 from dotenv import load_dotenv, set_key
-from api_client import fetch_candidates
+from api_client import fetch_candidates, fetch_openings_list, fetch_opening
 from data_processor import process_candidate_data
+
+# Define SimpleResp at module level
+class SimpleResp:
+    def __init__(self, status_code, json_data, text):
+        self.status_code = status_code
+        self._json = json_data
+        self.text = text
+    
+    def json(self):
+        return self._json
 
 def display_metrics(metrics):
     """Hiển thị các chỉ số tổng quan."""
@@ -53,21 +63,105 @@ def main():
         # Access Token lấy từ .env nếu có
         access_token = st.text_input(
             "Access Token:", 
-            help="Nhập access_token được cấp", 
+            help="Nhập access_token được cấp từ Base.vn", 
             value=os.getenv("BASE_TOKEN", "")
         )
 
+        # Nút để load danh sách openings
+        load_openings = st.form_submit_button("🔄 Tải danh sách Opening & Stage")
+
+    # Xử lý load openings ngoài form
+    openings_data = []
+    opening_options = {}
+    
+    if load_openings and access_token:
+        with st.spinner("Đang tải danh sách openings..."):
+            try:
+                resp = fetch_openings_list(access_token, page=1, num_per_page=100)
+                if resp.status_code == 200:
+                    data = resp.json()
+                    openings_data = data.get("openings", [])
+                    
+                    if openings_data:
+                        # Tạo dict: "ID - Tên" -> opening object
+                        for opening in openings_data:
+                            key = f"{opening.get('id')} - {opening.get('name', 'N/A')}"
+                            opening_options[key] = opening
+                        st.success(f"✅ Đã tải {len(openings_data)} openings")
+                        # Lưu vào session state
+                        st.session_state['openings'] = opening_options
+                    else:
+                        st.warning("Không tìm thấy opening nào")
+                else:
+                    st.error(f"Lỗi API: {resp.status_code} - {resp.text}")
+            except Exception as e:
+                st.error(f"Lỗi: {e}")
+    
+    # Load từ session state nếu đã có
+    if 'openings' in st.session_state:
+        opening_options = st.session_state['openings']
+
+    # Form chính để query candidates
+    with st.form("candidate_query_form"):
         col1, col2 = st.columns(2)
+        
         with col1:
-            opening_id = st.text_input("Opening ID:", value=os.getenv("OPENING_ID", "9346"))
+            if opening_options:
+                # Dropdown để chọn opening
+                selected_opening_key = st.selectbox(
+                    "🎯 Chọn Opening:",
+                    options=list(opening_options.keys()),
+                    help="Chọn vị trí tuyển dụng từ danh sách"
+                )
+                
+                # Lấy opening_id từ key đã chọn
+                selected_opening = opening_options[selected_opening_key]
+                opening_id = str(selected_opening.get('id'))
+                
+                # Hiển thị stages nếu có
+                stages = selected_opening.get('stages', [])
+                if stages:
+                    stage_options = {f"{s.get('id')} - {s.get('name', 'N/A')}": s.get('id') for s in stages}
+                    selected_stage_key = st.selectbox(
+                        "📊 Chọn Stage:",
+                        options=list(stage_options.keys()),
+                        help="Chọn giai đoạn tuyển dụng"
+                    )
+                    stage = str(stage_options[selected_stage_key])
+                else:
+                    stage = st.text_input("Stage ID:", value=os.getenv("STAGE_ID", "75440"))
+                    st.info("ℹ️ Opening này chưa có stages, vui lòng nhập thủ công")
+            else:
+                st.info("👆 Nhấn 'Tải danh sách Opening & Stage' ở trên để load dropdown")
+                opening_id = st.text_input("Opening ID:", value=os.getenv("OPENING_ID", "9346"))
+                stage = st.text_input("Stage ID:", value=os.getenv("STAGE_ID", "75440"))
+            
             page = st.number_input("Trang (page):", min_value=1, value=1)
             
         with col2:
-            stage = st.text_input("Stage ID:", value=os.getenv("STAGE_ID", "75440"))
-            num_per_page = st.number_input("Số lượng/trang (num_per_page):", min_value=1, max_value=100, value=int(os.getenv("NUM_PER_PAGE", "50") if os.getenv("NUM_PER_PAGE") else 50))
+            num_per_page = st.number_input(
+                "Số lượng/trang:", 
+                min_value=1, 
+                max_value=100, 
+                value=int(os.getenv("NUM_PER_PAGE", "50") if os.getenv("NUM_PER_PAGE") else 50)
+            )
 
-        submitted = st.form_submit_button("Gửi Yêu cầu API (POST)")
-    use_local_proxy = st.checkbox("Sử dụng proxy local (http://127.0.0.1:8000/candidates)", value=False)
+        submitted = st.form_submit_button("🚀 Gửi Yêu cầu API")
+    
+    use_local_proxy = st.checkbox(
+        "🔄 Sử dụng Proxy Server Local",
+        value=False,
+        help="""
+        Khi bật: Gửi request qua FastAPI proxy server local (http://127.0.0.1:8000/candidates)
+        - Proxy sẽ xử lý và forward request đến Base.vn API
+        - Có thể thêm logging, caching, hoặc transform data trước khi trả về
+        - Hữu ích cho development và debugging
+        
+        Khi tắt: Gửi request trực tiếp đến Base.vn API (https://hiring.base.vn/publicapi/v2/candidate/list)
+        - Kết nối trực tiếp, không qua trung gian
+        - Thích hợp cho production hoặc khi không cần proxy
+        """
+    )
 
     # --- 2. Logic Gọi API và Xử lý ---
     if submitted:
@@ -89,14 +183,6 @@ def main():
                 if proxy_resp.status_code == 200:
                     proxy_json = proxy_resp.json()
                     # adapt shape used later: set response-like object
-                    class SimpleResp:
-                        def __init__(self, status_code, json_data, text):
-                            self.status_code = status_code
-                            self._json = json_data
-                            self.text = text
-                        def json(self):
-                            return self._json
-
                     response = SimpleResp(200, proxy_json.get("raw", {}), json.dumps(proxy_json))
                 else:
                     response = SimpleResp(proxy_resp.status_code, {}, proxy_resp.text)
