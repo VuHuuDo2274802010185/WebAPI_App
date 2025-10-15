@@ -21,10 +21,11 @@ def main():
         st.subheader("Tham số API")
         
         # Access Token nên được lấy từ st.secrets trong thực tế
+        default_token = st.secrets.get("BASE_TOKEN", "token") if hasattr(st, 'secrets') else "token"
         access_token = st.text_input(
             "Access Token:", 
             help="Nhập access_token được cấp", 
-            value=st.secrets.get("BASE_TOKEN", "your_default_token") if "BASE_TOKEN" in st.secrets else "token"
+            value=default_token
         )
         
         col1, col2 = st.columns(2)
@@ -61,7 +62,7 @@ def main():
                 st.subheader(f"Danh sách Ứng viên (Tìm thấy: {processed_data['count_candidates']})")
                 
                 if not processed_data["dataframe"].empty:
-                    st.dataframe(processed_data["dataframe"], use_container_width=True)
+                    st.dataframe(processed_data["dataframe"], width="stretch")
                 else:
                     st.warning("Không tìm thấy ứng viên nào.")
                     

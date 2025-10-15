@@ -23,6 +23,10 @@ def process_candidate_data(json_data):
     # 2. Chuẩn bị dữ liệu cho DataFrame
     display_data = []
     for c in candidates_list:
+        # Xử lý CV link an toàn
+        cvs = c.get('cvs', [])
+        cv_link = cvs[0] if cvs and len(cvs) > 0 else 'Không có'
+        
         display_data.append({
             "ID": c.get('id'),
             "Họ & Tên": c.get('name'),
@@ -31,7 +35,7 @@ def process_candidate_data(json_data):
             "Vị trí ứng tuyển": c.get('opening_export', {}).get('name', 'N/A'),
             "Giai đoạn": c.get('stage_name', 'N/A'),
             "Nguồn": c.get('source', 'N/A'),
-            "CV Link": c.get('cvs')[0] if c.get('cvs') else 'Không có'
+            "CV Link": cv_link
         })
         
     # 3. Tạo DataFrame
